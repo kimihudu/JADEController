@@ -3,8 +3,13 @@ package lkphan.btcontroller.jadecontroller.activities;
 import android.bluetooth.BluetoothDevice;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.ImageFormat;
+import android.graphics.Paint;
 import android.hardware.Camera;
 import android.media.MediaRecorder;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.provider.SyncStateContract;
 import android.support.v7.app.AppCompatActivity;
@@ -13,14 +18,21 @@ import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
+import android.widget.Spinner;
 import android.widget.Toast;
 import android.widget.VideoView;
 
+import com.squareup.picasso.Picasso;
+
+import java.net.URI;
 import java.util.ArrayList;
+import java.util.List;
 
 import lkphan.btcontroller.jadecontroller.R;
 import lkphan.btcontroller.jadecontroller.model.*;
@@ -46,9 +58,6 @@ public class GuiActivity extends AppCompatActivity {
     final String ROVER_ON = CommandList.R_ROVER_START;
     final String ROVER_OFF = CommandList.R_ROVER_STOP;
 
-    private Camera mCamera;
-    private SurfaceView mSurfaceView;
-    private SurfaceHolder mSurfaceHolder;
     private MediaRecorder mMediaRecorder;
 
     private BluetoothDevice mBluetoothDevice;
@@ -63,9 +72,13 @@ public class GuiActivity extends AppCompatActivity {
     CheckBox cbxRoverOp;
     CheckBox cbxToggleConnect;
     ImageView mImageView;
+    SurfaceView mSurfaceView;
+    SurfaceHolder mSurfaceHolder;
+    Camera mCamera;
+    private Spinner spinnerCmd;
     String cmd = "";
-    Boolean isCamOn     = false;
-    Boolean isRoverOn   = false;
+    Boolean isCamOn = false;
+    Boolean isRoverOn = false;
 
 
     Boolean isHangeOver = false;
@@ -76,6 +89,8 @@ public class GuiActivity extends AppCompatActivity {
         setContentView(R.layout.activity_gui);
         addControl();
 
+//        setCamera();
+
         //TODO: get btJade
         mBluetoothDevice = getIntent().getExtras().getParcelable("data");
 //        TODO: create BluetoothHandler with selected btJade
@@ -84,16 +99,35 @@ public class GuiActivity extends AppCompatActivity {
 
             //            TODO: get data callback from Rover Mode
             @Override
-            public void onReceivedData(byte[] bytes) {
+            public void onReceivedData(final byte[] bytes) {
                 try {
-                    ArrayList dataPacket = Ultis.getDataPacket(bytes);
 
-                    String strPrefix = Ultis.convertArrayBufferToString((byte[])dataPacket.get(0));
-                    if (strPrefix.contains(Constant.STAT_IMG)){
-                        Bitmap bitmap = (Bitmap) dataPacket.get(2);
-                        printBitmap(bitmap);
+                    ThreadHandler.getInstance().doInForground(new Runnable() {
+                        @Override
+                        public void run() {
+                            ArrayList dataPacket = Ultis.getDataPacket(bytes);
 
-                    }
+                            String strPrefix = Ultis.convertArrayBufferToString((byte[]) dataPacket.get(0));
+                            if (strPrefix.contains(Constant.STAT_IMG)) {
+                                final Bitmap bitmap = (Bitmap) dataPacket.get(2);
+                                printBitmap(bitmap);
+//                        Canvas canvas = mSurfaceHolder.lockCanvas();
+//                        canvas.drawColor(Color.BLACK);
+//                        canvas.drawBitmap(bitmap, 0, 0, new Paint());
+//                        mSurfaceHolder.unlockCanvasAndPost(canvas);
+
+//                        mCamera.setPreviewCallback(new Camera.PreviewCallback() {
+//                            @Override
+//                            public void onPreviewFrame(byte[] bytes, Camera camera) {
+//                                previewCallBack(bitmap);
+//                            }
+//                        });
+//                        mCamera.startPreview();
+
+                            }
+                        }
+                    });
+
 
 
                 } catch (Exception e) {
@@ -105,6 +139,7 @@ public class GuiActivity extends AppCompatActivity {
             @Override
             public void onConnected(BluetoothDevice device) {
                 Toast.makeText(getApplicationContext(), "connected", Toast.LENGTH_LONG).show();
+
             }
 
             @Override
@@ -141,6 +176,21 @@ public class GuiActivity extends AppCompatActivity {
         mBluetoothHandler.connect(mBluetoothDevice);
     }
 
+//    private void setCamera() {
+//        mCamera = Camera.open();
+//        if (mCamera != null) {
+//            mCamera.setDisplayOrientation(90);
+//
+//            Camera.Parameters parameters = mCamera.getParameters();
+////            previewFormat = ImageFormat.NV21;
+//            parameters.setPreviewSize(320, 240);
+////            mSurfaceHolder.setFixedSize(width, height);
+//            parameters.setRotation(90);
+//            mCamera.setParameters(parameters);
+//        }
+//
+//    }
+
     private void addControl() {
 
         btnLeft = (Button) findViewById(R.id.btnLeft);
@@ -161,6 +211,9 @@ public class GuiActivity extends AppCompatActivity {
         cbxRoverOp = (CheckBox) findViewById(R.id.cbxRoverOp);
         cbxToggleConnect = (CheckBox) findViewById(R.id.cbxToggleConnect);
         mImageView = (ImageView) findViewById(R.id.video);
+//        mSurfaceView = (SurfaceView)findViewById(R.id.surfaceView);
+//        mSurfaceHolder = mSurfaceView.getHolder();
+
 
         btnUp.setOnClickListener(cmdMoveListener);
         btnDown.setOnClickListener(cmdMoveListener);
@@ -171,11 +224,12 @@ public class GuiActivity extends AppCompatActivity {
         cbxRoverOp.setOnClickListener(cmdOptionListener);
         cbxToggleConnect.setOnClickListener(cmdOptionListener);
 
+        addItemsOnSpinner();
+        addListenerOnSpinnerItemSelection();
 
     }
 
     private View.OnClickListener cmdMoveListener = new View.OnClickListener() {
-
 
         @Override
         public void onClick(View view) {
@@ -212,9 +266,8 @@ public class GuiActivity extends AppCompatActivity {
 
             Boolean isRoverMde = false;
 
-
-            String selectedControl  = ((CheckBox) view).getText().toString();
-            Boolean state           = ((CheckBox) view).isChecked();
+            String selectedControl = ((CheckBox) view).getText().toString();
+            Boolean state = ((CheckBox) view).isChecked();
 
             switch (selectedControl) {
                 case "Cam On/Off":
@@ -269,8 +322,6 @@ public class GuiActivity extends AppCompatActivity {
 
             if (isCamOn && isRoverOn) {
                 isRoverMde = true;
-
-
             }
 
             mBluetoothHandler.setROVER_MODE(isRoverMde);
@@ -283,38 +334,66 @@ public class GuiActivity extends AppCompatActivity {
         }
     };
 
-    private class LoadBitmap extends AsyncTask<Bitmap, Bitmap, Bitmap> {
+    // add items into spinner dynamically
+    public void addItemsOnSpinner() {
 
+        spinnerCmd = (Spinner) findViewById(R.id.spinnerCmd);
+        List<String> list = new ArrayList<String>();
 
-        @Override
-        protected Bitmap doInBackground(Bitmap... bitmaps) {
-            try {
-                Thread.sleep(300);
-            } catch (Exception e) {
-                Log.i("LoadBitmap", "LoadBitmap" + e.getMessage());
-            }
-            return bitmaps[0];
-        }
+        list = Ultis.getFieldObj(RoverModeCmd.class);
 
-        //        waiting for doInBackground complete
-        @Override
-        protected void onPostExecute(final Bitmap bitmap) {
-
-            printBitmap(bitmap);
-        }
+        ArrayAdapter<String> dataAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, list);
+        dataAdapter.setDropDownViewResource(android.R.layout.preference_category);
+        spinnerCmd.setAdapter(dataAdapter);
     }
 
+    public void addListenerOnSpinnerItemSelection() {
+        spinnerCmd = (Spinner) findViewById(R.id.spinnerCmd);
+        spinnerCmd.setOnItemSelectedListener(cmdClickListener);
+    }
+
+    //    TODO: select cmd and execute
+    private AdapterView.OnItemSelectedListener cmdClickListener = new AdapterView.OnItemSelectedListener() {
+        public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
+            Toast.makeText(parent.getContext(),
+                    "OnItemSelectedListener : " + parent.getItemAtPosition(pos).toString(),
+                    Toast.LENGTH_SHORT).show();
+            String selectedCmd = parent.getItemAtPosition(pos).toString();
+//            get value cmd of object's field
+            String _cmd = Ultis.getVoField(RoverModeCmd.class, selectedCmd, "String").toString();
+            if (!_cmd.equals(RoverModeCmd.ADEFAULT))
+                mBluetoothHandler.write(_cmd);
+
+        }
+
+        @Override
+        public void onNothingSelected(AdapterView<?> arg0) {
+            // TODO Auto-generated method stub
+        }
+    };
+
+    //TODO: load bitmap to Picasso for refreshing
     private void printBitmap(final Bitmap bitmap) {
         if (bitmap != null) {
             Log.e(TAG, "Bitmap:" + bitmap.getWidth() + " - " + bitmap.getHeight() + " - " + bitmap.getByteCount());
             ThreadHandler.getInstance().doInForground(new Runnable() {
                 @Override
                 public void run() {
+                    Uri file = Ultis.getImageUri(getApplicationContext(), bitmap);
+                    Picasso picasso = Picasso.with(getApplicationContext());
+                    picasso.invalidate(file);
+                    picasso.load(file).into(mImageView);
 
-                    mImageView.setImageBitmap(bitmap);
+//                    mImageView.setImageBitmap(bitmap);
 //                    mImageView.invalidate();
+
                 }
             });
         }
+    }
+
+
+    private void previewCallBack(Bitmap bitmap) {
+        printBitmap(bitmap);
     }
 }

@@ -42,9 +42,19 @@
                 <!--android:layout_height="320dp" />-->
 
             <ImageView
-                android:id="@+id/video"
                 android:layout_width="wrap_content"
-                android:layout_height="320dp" />
+                android:layout_height="wrap_content"
+                android:id="@+id/video"
+                android:layout_alignParentTop="true"
+                android:layout_centerHorizontal="true"/>
+
+
+            <!--<SurfaceView-->
+                <!--android:id="@+id/surfaceView"-->
+                <!--android:layout_width="320dp"-->
+                <!--android:layout_height="480dp" />-->
+
+
 
         </LinearLayout>
 
@@ -89,13 +99,29 @@
 
         </LinearLayout>
 
-        <Button
+        <LinearLayout
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:layout_marginBottom="15dp"
-            android:id="@+id/btnDebugMode"
-            android:text="debug mode"/>
+            android:layout_height="wrap_content">
+
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:layout_marginBottom="15dp"
+                android:id="@+id/btnDebugMode"
+                android:text="debug mode"/>
+
+            <Spinner
+                android:id="@+id/spinnerCmd"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignTop="@+id/cbxDisconnect"
+                android:layout_centerHorizontal="true"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:layout_weight="0.67" />
+        </LinearLayout>
+
 
         <RelativeLayout
             android:layout_width="match_parent"

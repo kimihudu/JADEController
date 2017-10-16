@@ -7,12 +7,15 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.ColorSpace;
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.util.Base64;
 import android.util.Log;
 import android.widget.Toast;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
 import java.lang.reflect.Field;
@@ -88,8 +91,10 @@ public class Ultis {
             opts.inPreferredConfig = Bitmap.Config.RGB_565;
             // Decode bitmap with inSampleSize set
             opts.inJustDecodeBounds = false;
-            opts.inDither = true;
+            opts.inBitmap =
             bmp = BitmapFactory.decodeByteArray(datapacket, 0, datapacket.length, opts);
+            int size = bmp.getHeight() * bmp.getRowBytes();
+            Log.i(TAG,String.valueOf(size));
 
         }
 
@@ -284,5 +289,11 @@ public class Ultis {
         return true;
     }
 
+    public static Uri getImageUri(Context inContext, Bitmap inImage) {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        inImage.compress(Bitmap.CompressFormat.JPEG, 100, bytes);
+        String path = MediaStore.Images.Media.insertImage(inContext.getContentResolver(), inImage, "Title", null);
+        return Uri.parse(path);
+    }
 
 }

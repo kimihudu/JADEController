@@ -121,7 +121,7 @@ public class CommandList {
     public final static String R_SPECTRO      = "spectro\r";
 
     /* Bluetooth LED cmd */
-    public final static String K_BT_LED_ON     = "btledon\r";
+    public final static String R_BT_LED_ON     = "btledon\r";
     public final static String K_BT_LED_OFF    = "btledoff\r";
 
     public final static String L_SET_LEFT_MTR  = "setleftmtr ##\r";
