@@ -75,10 +75,11 @@ public class Ultis {
 
         if (data == null || data.length == 0)
             return null;
-//check for non-standard data callback
-        byte[] prefix = Arrays.copyOfRange(data, 0, 6);
-        byte[] dataSize = Arrays.copyOfRange(data, 6, 9);
-        byte[] datapacket = Arrays.copyOfRange(data, 9, data.length);
+
+
+        byte[] prefix = copyByteArray(data,0,6);
+        byte[] dataSize = copyByteArray(data,6,9);
+        byte[] datapacket = copyByteArray(data,9,data.length);
         byte[] eoi = Arrays.copyOfRange(datapacket, datapacket.length - 2, datapacket.length);
         byte[] soi = Arrays.copyOfRange(datapacket, 0, 2);
         Bitmap bmp = null;
@@ -101,6 +102,7 @@ public class Ultis {
         dataCB.add(prefix);
         dataCB.add(dataSize);
         dataCB.add(bmp);
+        dataCB.add(datapacket);
         return dataCB;
     }
 
@@ -227,11 +229,7 @@ public class Ultis {
     }
 
 
-    public static int arrayBufferToInt(byte[] bytes, int offset) {
-
-//        BigInteger ui = new BigInteger(b); // let BigInteger do the work
-//        int i = ui.intValue();
-//        return i;
+    public static int byteArray2Int(byte[] bytes, int offset) {
 
         int ret = 0;
         for (int i = 0; i < 4 && i + offset < bytes.length; i++) {
@@ -281,12 +279,17 @@ public class Ultis {
 
     //TODO: check standard packet
     public static Boolean isStandardPacket(byte[] bytes) {
-        byte first = bytes[0];
-        byte second = bytes[1];
-        if (first == second && first == 13)
-            return false;
-
-        return true;
+        int pos = 0;
+        for (int i = 0; i < bytes.length; i++) {
+            if (bytes[i] == Constant.COLON) {
+                pos = i - 4;
+                break;
+            }
+        }
+        String roverActive = Ultis.convertArrayBufferToString(Arrays.copyOfRange(bytes,0,pos));
+        if (roverActive.equals(Constant.ROVER_ACTIVE))
+            return true;
+        return false;
     }
 
     public static Uri getImageUri(Context inContext, Bitmap inImage) {
@@ -294,6 +297,15 @@ public class Ultis {
         inImage.compress(Bitmap.CompressFormat.JPEG, 100, bytes);
         String path = MediaStore.Images.Media.insertImage(inContext.getContentResolver(), inImage, "Title", null);
         return Uri.parse(path);
+    }
+
+    public static byte[] copyByteArray(byte[] bytes,int from, int to){
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        byteArrayOutputStream.write(data);
+        byte[] streamData = byteArrayOutputStream.toByteArray();
+
+        return Arrays.copyOfRange(streamData,from,to);
+
     }
 
 }

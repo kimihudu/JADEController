@@ -10,6 +10,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EmptyStackException;
 import java.util.UUID;
@@ -17,6 +18,7 @@ import java.util.UUID;
 import lkphan.btcontroller.jadecontroller.ultis.Ultis;
 
 import static android.R.attr.data;
+import static android.R.attr.handle;
 import static android.support.v7.appcompat.R.id.up;
 
 /**
@@ -242,22 +244,35 @@ public class BluetoothHandler {
                             byte[] streamData = byteArrayOutputStream.toByteArray();
 //                                check EOI inside datapacket
                             if (Ultis.isEOI(streamData)) {
-                                //                            Check and get standard dataPacket
-                                if (!Ultis.isStandardPacket(streamData)) {
+                                //Check and get standard dataPacket
+                                if (Ultis.isStandardPacket(streamData)) {
                                     streamData = Ultis.getStandardPacket(streamData);
-                                }
-                                final byte[] completeData = streamData;
-                                int completeDataSize = streamData.length;
-                                mBluetoothListener.onReceivedData(Arrays.copyOfRange(completeData, 0, completeDataSize));
+                                    final byte[] completeData = streamData;
+                                    int completeDataSize = streamData.length;
+                                    mBluetoothListener.onReceivedData(Arrays.copyOfRange(completeData, 0, completeDataSize));
+                                }else
+                                    Log.i(TAG,streamData.toString());
+
                             }
 
                         } else {
 
-                            final String receivedKey = Ultis.convertArrayBufferToString(data);
+                            String receivedKey = Ultis.convertArrayBufferToString(data);
+
+//                            handle for last data callback when existing Rover Mode
+                            if (receivedKey.contains(":")){
+                                byte[] receivedByte = Arrays.copyOfRange(data, 0, data.length);
+                                ArrayList receivedListStr = Ultis.getDataPacket(receivedByte);
+                                String _prefix = Ultis.convertArrayBufferToString((byte[])receivedListStr.get(0));
+                                int _dataSize = Ultis.byteArray2Int((byte[])receivedListStr.get(1),0);
+                                receivedKey = _prefix + ":" + _dataSize;
+                            }
+
+                            final String msg = receivedKey;
                             ThreadHandler.getInstance().doInForground(new Runnable() {
                                 @Override
                                 public void run() {
-                                    mBluetoothListener.onGotCallback(receivedKey);
+                                    mBluetoothListener.onGotCallback(msg);
                                 }
                             });
                         }

@@ -8,7 +8,8 @@ public class RoverModeCmd {
 
      /* TODO:----- Rover mode ----- */
 
-    public final static String ADEFAULT  = "...";
+    public final static String ADEFAULT     = "...";
+    public final static String A_TERMINATE  = "halt\r";
     public final static String ROVER_START  = "roverstart\r";
     public final static String ROVER_STOP   = "roverstop\r";
     public final static String ROVER_STAT   = "roverstat\r";
@@ -20,9 +21,8 @@ public class RoverModeCmd {
     /* Bluetooth LED cmd */
     public final static String BT_LED_ON     = "btledon\r";
     public final static String BT_LED_OFF    = "btledoff\r";
-
-    public final static String SET_LEFT_MTR  = "setleftmtr ##\r";
-    public final static String SET_RIGHT_NTR = "setritemtr ##\r";
+    public final static String SET_LEFT_MTR  = "setleftmtr #\r"; // "setleftmtr + number\r"
+    public final static String SET_RIGHT_NTR = "setritemtr #\r"; // "setritemtr + number\r"
 
     /* Servo cmd */
     public final static String SERVO_ON         = "servoon\r";
@@ -34,10 +34,9 @@ public class RoverModeCmd {
     public final static String SERVO_DOWN       = "servodown\r";
 
     /* Grip cmd */
-    public final static String GRIP_SET         = "gripset ##\r";
-    public final static String ELE_SET          = "eleset ##\r";
-
-    public final static String CAM_RES          = "camres #\r";
+    public final static String GRIP_SET         = "gripset #\r"; // "gripset + number\r"
+    public final static String ELE_SET          = "eleset #\r"; // "eleset + number\r"
+    public final static String CAM_RES          = "camres 1\r"; // "camres + number\r"
 
     /* EXP cmd */
     public final static String EXP1_PWR_ON  = "exp1pwron\r";
