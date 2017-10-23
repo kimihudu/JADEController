@@ -9,6 +9,8 @@ import android.graphics.ColorSpace;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
+import android.os.SystemClock;
 import android.provider.MediaStore;
 import android.util.Base64;
 import android.util.Log;
@@ -17,7 +19,10 @@ import android.widget.Toast;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -26,8 +31,10 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.PublicKey;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -72,37 +79,30 @@ public class Ultis {
     //    TODO:Destructure datacallback then return the list
     public static ArrayList getDataPacket(byte[] data) {
         ArrayList dataCB = new ArrayList();
+        String compare = convertArrayBufferToString(data);
+        String _prefix = "";
+
 
         if (data == null || data.length == 0)
             return null;
 
-
-        byte[] prefix = copyByteArray(data,0,6);
-        byte[] dataSize = copyByteArray(data,6,9);
-        byte[] datapacket = copyByteArray(data,9,data.length);
-        byte[] eoi = Arrays.copyOfRange(datapacket, datapacket.length - 2, datapacket.length);
-        byte[] soi = Arrays.copyOfRange(datapacket, 0, 2);
-        Bitmap bmp = null;
-
-        if (byte2Hex(soi).contains(Constant.SOI) && byte2Hex(eoi).contains(Constant.EOI)) {
-
-            Log.i(TAG, "img packet: " + Arrays.toString(datapacket));
-
-            BitmapFactory.Options opts = new BitmapFactory.Options();
-            opts.inPreferredConfig = Bitmap.Config.RGB_565;
-            // Decode bitmap with inSampleSize set
-            opts.inJustDecodeBounds = false;
-            opts.inBitmap =
-            bmp = BitmapFactory.decodeByteArray(datapacket, 0, datapacket.length, opts);
-            int size = bmp.getHeight() * bmp.getRowBytes();
-            Log.i(TAG,String.valueOf(size));
-
+        if (compare.contains(Constant.ROVER_IMG)) {
+            _prefix = Constant.ROVER_IMG;
+        } else if (compare.contains(Constant.ROVER_STAT)) {
+            _prefix = Constant.ROVER_STAT;
         }
 
-        dataCB.add(prefix);
-        dataCB.add(dataSize);
-        dataCB.add(bmp);
-        dataCB.add(datapacket);
+        byte[] datapacket = Arrays.copyOfRange(data, 8, data.length);
+        String eoi = byte2Hex(datapacket[datapacket.length - 2]) + " " + byte2Hex(datapacket[datapacket.length - 1]);
+        String soi = byte2Hex(datapacket[0]) + " " + byte2Hex(datapacket[1]) + " " + byte2Hex(datapacket[2]);
+
+        dataCB.add(_prefix);
+
+        if (soi.contains(Constant.SOI) && eoi.contains(Constant.EOI)) {
+            dataCB.add(datapacket);
+        } else
+            dataCB.add(0);
+
         return dataCB;
     }
 
@@ -113,9 +113,7 @@ public class Ultis {
 
     //TODO: convert String to ArrayBuffer
     public static byte[] convertStringToArrayBuffer(String msg) {
-
-        byte[] buff = msg.getBytes();
-        return buff;
+        return msg.getBytes();
     }
 
     //     TODO: get all fields inside class with filter
@@ -258,36 +256,28 @@ public class Ultis {
     //TODO: get standard packet
     public static byte[] getStandardPacket(byte[] bytes) {
         int pos = 0;
-        byte[] returnBytes = null;
         for (int i = 0; i < bytes.length; i++) {
             if (bytes[i] == Constant.COLON) {
                 pos = i;
                 break;
             }
         }
-        returnBytes = Arrays.copyOfRange(bytes, pos - 5, bytes.length);
-        return returnBytes;
+        return Arrays.copyOfRange(bytes, pos - 4, bytes.length);
     }
 
     //TODO: check EOI
     public static Boolean isEOI(byte[] bytes) {
-        byte[] eoi = Arrays.copyOfRange(bytes, bytes.length - 2, bytes.length);
-        if (byte2Hex(eoi).contains(Constant.EOI))
+//        byte[] eoi = Arrays.copyOfRange(bytes, bytes.length - 2, bytes.length);
+        String eoi = byte2Hex(bytes[bytes.length - 2]) + " " + byte2Hex(bytes[bytes.length - 1]);
+        if (eoi.contains(Constant.EOI))
             return true;
         return false;
     }
 
     //TODO: check standard packet
     public static Boolean isStandardPacket(byte[] bytes) {
-        int pos = 0;
-        for (int i = 0; i < bytes.length; i++) {
-            if (bytes[i] == Constant.COLON) {
-                pos = i - 4;
-                break;
-            }
-        }
-        String roverActive = Ultis.convertArrayBufferToString(Arrays.copyOfRange(bytes,0,pos));
-        if (roverActive.equals(Constant.ROVER_ACTIVE))
+        String compare = Ultis.convertArrayBufferToString(bytes);
+        if (compare.contains(Constant.ROVER_ACTIVE) && compare.contains(Constant.ROVER_CAM_ACTIVE))
             return true;
         return false;
     }
@@ -299,12 +289,98 @@ public class Ultis {
         return Uri.parse(path);
     }
 
-    public static byte[] copyByteArray(byte[] bytes,int from, int to){
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        byteArrayOutputStream.write(data);
-        byte[] streamData = byteArrayOutputStream.toByteArray();
+    public static byte[] copyByteArray(byte[] bytes, int from, int to) {
+        return null;
 
-        return Arrays.copyOfRange(streamData,from,to);
+//
+//
+//        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+//
+//        try {
+//            byteArrayOutputStream.write(bytes);
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+////        byte[] streamData = byteArrayOutputStream.toByteArray();
+//
+//        return Arrays.copyOfRange(byteArrayOutputStream.toByteArray(), from, to);
+
+    }
+
+    public static Bitmap byteArray2Bitmap(byte[] bytes) {
+
+        String soi = byte2Hex(bytes[0]) + " " + byte2Hex(bytes[1]) + " " + byte2Hex(bytes[2]);
+        String eoi = byte2Hex(bytes[bytes.length - 2]) + " " + byte2Hex(bytes[bytes.length - 1]);
+
+        if (!((soi.equals(Constant.SOI) && eoi.equals(Constant.EOI))))
+            return null;
+
+        BitmapFactory.Options opts = new BitmapFactory.Options();
+        opts.inPreferredConfig = Bitmap.Config.ARGB_8888;
+        opts.inMutable = true;
+        try {
+            Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, opts);
+            Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, Constant.IMG_WIDTH, Constant.IMG_HEIGHT, false);
+            return scaledBitmap;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+
+        return null;
+    }
+
+    public static Bitmap bmpDecoder(byte[] bytes, Bitmap initBmp) {
+        BitmapFactory.Options opts = new BitmapFactory.Options();
+        opts.inPreferredConfig = Bitmap.Config.ARGB_8888;
+//        opts.inJustDecodeBounds = false;
+        opts.inMutable = true;
+//        opts.inTempStorage = new byte[16*1024];
+        opts.inPurgeable = true;
+        opts.inPreferQualityOverSpeed = false;
+        opts.inDither = false;
+        opts.inBitmap = initBmp;
+        try {
+            Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, opts);
+            Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, Constant.IMG_WIDTH, Constant.IMG_HEIGHT, true);
+            return scaledBitmap;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    public static File saveBitmap(Bitmap bmp) {
+        try {
+            String filename;
+
+            filename = Long.toString(SystemClock.elapsedRealtime());
+
+            ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+            bmp.compress(Bitmap.CompressFormat.JPEG, 60, bytes);
+            File f = new File(Environment.getExternalStorageDirectory()
+                    + File.separator + filename + ".jpg");
+            f.createNewFile();
+            FileOutputStream fo = new FileOutputStream(f);
+            fo.write(bytes.toByteArray());
+            fo.close();
+            return f;
+        } catch (Exception e) {
+        }
+
+        return null;
+    }
+
+    public static String testRenderBmpArray(byte[] bytes) {
+        if (bytes == null)
+            return null;
+
+        ArrayList dataPacket = getDataPacket(bytes);
+        Bitmap img = Ultis.byteArray2Bitmap((byte[]) dataPacket.get(1));
+        File savedBmp = Ultis.saveBitmap(img);
+
+        return savedBmp.getAbsolutePath();
 
     }
 

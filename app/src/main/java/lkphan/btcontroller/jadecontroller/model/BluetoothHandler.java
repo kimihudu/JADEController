@@ -46,7 +46,10 @@ public class BluetoothHandler {
     public static final int STATE_CONNECTED = 3;  // now connected to a remote device
     public static final int STATE_RECONNECTED = 4;  // now Reconnected to a remote device
     private static final String TAG = "BluetoothHandler";
-    private static final int ARRAY_BUFFER = 1024 * 3;
+    private static final int SMALL_BUFF = 1024;
+    private static final int BIG_BUFF = 1024 * 64;
+    byte[] smallByte;
+    byte[] bigByte;
 
 
     public BluetoothHandler(BluetoothListener bluetoothListener, boolean isRoverMode) {
@@ -70,10 +73,10 @@ public class BluetoothHandler {
     public synchronized void start() {
         setState(STATE_LISTEN);
         resetThreads(true, true, false);
-        if (mAcceptThread == null) {
-            mAcceptThread = new AcceptThread();
-            mAcceptThread.start();
-        }
+//        if (mAcceptThread == null) {
+//            mAcceptThread = new AcceptThread();
+//            mAcceptThread.start();
+//        }
     }
 
     public synchronized void connect(BluetoothDevice bluetoothDevice) {
@@ -226,48 +229,33 @@ public class BluetoothHandler {
         public void run() {
             byte[] data;
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-            while (true) {
+            while (mBluetoothSocket.isConnected()) {
                 try {
 
                     try {
                         Thread.sleep(500);
                     } catch (Exception e) {
-                    }
 
+                    }
                     int available = mInputStream.available();
                     if (available > 0) {
                         data = new byte[available];
                         mInputStream.read(data);
                         byteArrayOutputStream.write(data);
                         if (mIsRoverMode) {
-                            byteArrayOutputStream.write(data);
-                            byte[] streamData = byteArrayOutputStream.toByteArray();
-//                                check EOI inside datapacket
-                            if (Ultis.isEOI(streamData)) {
-                                //Check and get standard dataPacket
-                                if (Ultis.isStandardPacket(streamData)) {
-                                    streamData = Ultis.getStandardPacket(streamData);
-                                    final byte[] completeData = streamData;
-                                    int completeDataSize = streamData.length;
-                                    mBluetoothListener.onReceivedData(Arrays.copyOfRange(completeData, 0, completeDataSize));
-                                }else
-                                    Log.i(TAG,streamData.toString());
 
+                            if (Ultis.isEOI(byteArrayOutputStream.toByteArray())) {
+                                try {
+                                    byte[] streamData = Ultis.getStandardPacket(byteArrayOutputStream.toByteArray());
+                                    mBluetoothListener.onReceivedData(streamData);
+//                                    String savedFile = Ultis.testRenderBmpArray(streamData);
+//                                    Log.i(TAG, "saved img " + savedFile);
+                                } finally {
+                                    byteArrayOutputStream.reset();
+                                }
                             }
-
                         } else {
-
                             String receivedKey = Ultis.convertArrayBufferToString(data);
-
-//                            handle for last data callback when existing Rover Mode
-                            if (receivedKey.contains(":")){
-                                byte[] receivedByte = Arrays.copyOfRange(data, 0, data.length);
-                                ArrayList receivedListStr = Ultis.getDataPacket(receivedByte);
-                                String _prefix = Ultis.convertArrayBufferToString((byte[])receivedListStr.get(0));
-                                int _dataSize = Ultis.byteArray2Int((byte[])receivedListStr.get(1),0);
-                                receivedKey = _prefix + ":" + _dataSize;
-                            }
-
                             final String msg = receivedKey;
                             ThreadHandler.getInstance().doInForground(new Runnable() {
                                 @Override
@@ -275,6 +263,7 @@ public class BluetoothHandler {
                                     mBluetoothListener.onGotCallback(msg);
                                 }
                             });
+//                            Log.i(TAG,"out of Rover sent to onGotCallback" + msg);
                         }
                     }
                 } catch (IOException e) {
@@ -288,6 +277,8 @@ public class BluetoothHandler {
                         }
                     });
                     break;
+                } finally {
+//                    data = null;
                 }
             }
         }

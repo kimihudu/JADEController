@@ -30,6 +30,7 @@
             android:textStyle="bold" />
 
         <LinearLayout
+            android:id="@+id/img_holder"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
@@ -37,23 +38,42 @@
 
 
             <!--<VideoView-->
-                <!--android:id="@+id/video"-->
-                <!--android:layout_width="wrap_content"-->
-                <!--android:layout_height="320dp" />-->
+            <!--android:id="@+id/video"-->
+            <!--android:layout_width="wrap_content"-->
+            <!--android:layout_height="320dp" />-->
 
-            <ImageView
-                android:layout_width="wrap_content"
+            <FrameLayout
+                android:layout_width="fill_parent"
                 android:layout_height="320dp"
-                android:id="@+id/video"
-                android:layout_alignParentTop="true"
-                android:layout_centerHorizontal="true"/>
+                android:layout_weight="1">
+
+                <SurfaceView
+                    android:id="@+id/surfaceView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@null" />
+
+                <ImageView
+                    android:layout_gravity="top|right"
+                    android:id="@+id/video"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_alignParentTop="true"
+                    android:layout_centerHorizontal="true"
+                    android:background="@color/colorWhite"
+                    />
+            </FrameLayout>
+
+            <!--<lkphan.btcontroller.jadecontroller.model.CustomSurfaceView-->
+            <!--android:layout_width="match_parent"-->
+            <!--android:layout_height="320dp"-->
+            <!--android:id="@+id/surfaceView"/>-->
 
 
             <!--<SurfaceView-->
-                <!--android:id="@+id/surfaceView"-->
-                <!--android:layout_width="320dp"-->
-                <!--android:layout_height="480dp" />-->
-
+            <!--android:id="@+id/surfaceView"-->
+            <!--android:layout_width="320dp"-->
+            <!--android:layout_height="480dp" />-->
 
 
         </LinearLayout>
@@ -64,7 +84,6 @@
             android:layout_marginTop="10dp"
             android:orientation="horizontal"
             android:weightSum="1">
-
 
 
             <CheckBox
@@ -96,7 +115,6 @@
                 android:text="Rover On/Off" />
 
 
-
         </LinearLayout>
 
         <LinearLayout
@@ -104,12 +122,19 @@
             android:layout_height="wrap_content">
 
             <Button
+                android:id="@+id/btnDebugMode"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentBottom="true"
                 android:layout_marginBottom="15dp"
-                android:id="@+id/btnDebugMode"
-                android:text="debug mode"/>
+                android:text="debug mode" />
+            <Button
+                android:id="@+id/btnTestFrame"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:layout_marginBottom="15dp"
+                android:text="test frame" />
 
             <Spinner
                 android:id="@+id/spinnerCmd"
@@ -117,9 +142,9 @@
                 android:layout_height="wrap_content"
                 android:layout_alignTop="@+id/cbxDisconnect"
                 android:layout_centerHorizontal="true"
+                android:layout_weight="0.67"
                 android:ellipsize="end"
-                android:maxLines="1"
-                android:layout_weight="0.67" />
+                android:maxLines="1" />
         </LinearLayout>
 
 
@@ -132,37 +157,36 @@
                 android:id="@+id/btnRight"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/btnUp"
                 android:layout_alignParentEnd="true"
-                android:text="right"/>
+                android:layout_below="@+id/btnUp"
+                android:text="right" />
 
             <Button
                 android:id="@+id/btnLeft"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_centerVertical="true"
                 android:layout_alignParentStart="true"
-                android:text="left"/>
+                android:layout_centerVertical="true"
+                android:text="left" />
 
             <Button
+                android:id="@+id/btnUp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentTop="true"
                 android:layout_centerHorizontal="true"
-                android:id="@+id/btnUp"
-                android:text="up"/>
+                android:text="up" />
 
             <Button
+                android:id="@+id/btnDown"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentBottom="true"
                 android:layout_alignStart="@+id/btnUp"
                 android:layout_marginBottom="15dp"
-                android:id="@+id/btnDown"
-                android:text="down"/>
+                android:text="down" />
 
         </RelativeLayout>
-
 
 
         <TextView
@@ -173,10 +197,6 @@
             android:maxLines="1"
             android:text="------------------------------------------------------------"
             android:textStyle="bold" />
-
-
-
-
 
 
     </LinearLayout>

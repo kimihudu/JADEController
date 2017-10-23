@@ -8,7 +8,9 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.INTERNET" />
+
     <uses-feature android:name="android.hardware.camera" />
+
     <uses-permission android:name="android.permission.CAMERA" />
 
     <!-- <instrumentation -->
@@ -51,7 +53,8 @@
             <!-- </intent-filter> -->
         </activity>
         <activity android:name=".activities.CommandActivity" />
-        <activity android:name=".activities.GuiActivity"></activity>
+        <activity android:name=".activities.GuiActivity" />
+        <activity android:name=".activities.TestActivity"></activity>
     </application>
 
 </manifest>

@@ -1,47 +1,70 @@
 package lkphan.btcontroller.jadecontroller.activities;
 
+import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothDevice;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.ImageFormat;
 import android.graphics.Paint;
+import android.graphics.PixelFormat;
+import android.graphics.drawable.AnimationDrawable;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.hardware.Camera;
 import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Handler;
+import android.os.Parcelable;
+import android.os.SystemClock;
 import android.provider.SyncStateContract;
+import android.support.annotation.MainThread;
+import android.support.v4.content.ContextCompat;
+import android.support.v4.content.SharedPreferencesCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.TimingLogger;
+import android.view.Choreographer;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.Toast;
 import android.widget.VideoView;
 
 import com.squareup.picasso.Picasso;
 
+import java.io.File;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Timer;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import lkphan.btcontroller.jadecontroller.R;
 import lkphan.btcontroller.jadecontroller.model.*;
 import lkphan.btcontroller.jadecontroller.ultis.*;
 
+import static android.R.attr.bitmap;
 import static android.R.attr.breadCrumbShortTitle;
 import static android.R.attr.cacheColorHint;
 import static android.R.attr.data;
+import static android.R.attr.start;
 import static android.media.CamcorderProfile.get;
+import static android.support.v7.appcompat.R.id.image;
 
 public class GuiActivity extends AppCompatActivity {
 
@@ -64,11 +87,13 @@ public class GuiActivity extends AppCompatActivity {
 
     private BluetoothDevice mBluetoothDevice;
     private BluetoothHandler mBluetoothHandler;
+    ArrayList<String> listImg = new ArrayList<>();
     Button btnLeft;
     Button btnRight;
     Button btnUp;
     Button btnDown;
     Button btnDebugMode;
+    Button btnTestFrame;
     CheckBox cbxCamOp;
     CheckBox cbxGripOp;
     CheckBox cbxRoverOp;
@@ -81,9 +106,12 @@ public class GuiActivity extends AppCompatActivity {
     String cmd = "";
     Boolean isCamOn = false;
     Boolean isRoverOn = false;
-
-
+    SurfaceView surfaceView;
+    SurfaceHolder surfaceHolder;
+    AnimationDrawable animationDrawable;
     Boolean isHangeOver = false;
+    LinearLayout imgHolder;
+    Choreographer mChoreographer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -98,6 +126,9 @@ public class GuiActivity extends AppCompatActivity {
 //        TODO: create BluetoothHandler with selected btJade
         BTListenerTask btListenerTask = new BTListenerTask();
         btListenerTask.execute(mBluetoothDevice);
+        mImageView.invalidate();
+
+
 
 //        mBluetoothHandler = BluetoothHandler.newInstance(new BluetoothListener() {
 //            String datacb = "";
@@ -196,6 +227,8 @@ public class GuiActivity extends AppCompatActivity {
 
     private void addControl() {
 
+
+        imgHolder = (LinearLayout) findViewById(R.id.img_holder);
         btnLeft = (Button) findViewById(R.id.btnLeft);
         btnRight = (Button) findViewById(R.id.btnRight);
         btnUp = (Button) findViewById(R.id.btnUp);
@@ -209,13 +242,42 @@ public class GuiActivity extends AppCompatActivity {
             }
         });
 
+        btnTestFrame = (Button) findViewById(R.id.btnTestFrame);
+        btnTestFrame.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mBluetoothHandler.stop();
+                Intent i = new Intent(getApplicationContext(), TestActivity.class);
+                i.putExtra("listImg",listImg);
+                startActivity(i);
+
+            }
+        });
+
         cbxCamOp = (CheckBox) findViewById(R.id.cbxCamOp);
         cbxGripOp = (CheckBox) findViewById(R.id.cbxGripOp);
         cbxRoverOp = (CheckBox) findViewById(R.id.cbxRoverOp);
         cbxToggleConnect = (CheckBox) findViewById(R.id.cbxToggleConnect);
         mImageView = (ImageView) findViewById(R.id.video);
-//        mSurfaceView = (SurfaceView)findViewById(R.id.surfaceView);
-//        mSurfaceHolder = mSurfaceView.getHolder();
+        mSurfaceView = (SurfaceView) findViewById(R.id.surfaceView);
+        mSurfaceHolder = mSurfaceView.getHolder();
+        mSurfaceHolder.setFormat(PixelFormat.RGBA_8888);
+        mSurfaceHolder.addCallback(new SurfaceHolder.Callback() {
+            @Override
+            public void surfaceCreated(SurfaceHolder surfaceHolder) {
+                mSurfaceView.setWillNotDraw(false);
+            }
+
+            @Override
+            public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i1, int i2) {
+                Toast.makeText(getApplicationContext(), "surface changeed", Toast.LENGTH_LONG).show();
+            }
+
+            @Override
+            public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
+
+            }
+        });
 
 
         btnUp.setOnClickListener(cmdMoveListener);
@@ -230,6 +292,7 @@ public class GuiActivity extends AppCompatActivity {
         addItemsOnSpinner();
         addListenerOnSpinnerItemSelection();
 
+        mChoreographer = Choreographer.getInstance();
     }
 
     private View.OnClickListener cmdMoveListener = new View.OnClickListener() {
@@ -357,16 +420,17 @@ public class GuiActivity extends AppCompatActivity {
             String selectedCmd = parent.getItemAtPosition(pos).toString();
 //            get value cmd of object's field
             String _cmd = Ultis.getVoField(RoverModeCmd.class, selectedCmd, "String").toString();
-            if (!_cmd.equals(RoverModeCmd.ADEFAULT)){
+            if (!_cmd.equals(RoverModeCmd.ADEFAULT)) {
 
-                if (_cmd.equals(ROVER_OFF) || _cmd.equals(RoverModeCmd.A_TERMINATE)){
+                if (_cmd.equals(ROVER_OFF) || _cmd.equals(RoverModeCmd.A_TERMINATE)) {
                     cbxRoverOp.setChecked(false);
                     mBluetoothHandler.setROVER_MODE(false);
-                }else if (_cmd.equals(ROVER_ON)){
+                } else if (_cmd.equals(ROVER_ON)) {
                     cbxRoverOp.setChecked(true);
                     mBluetoothHandler.setROVER_MODE(true);
                 }
 
+                mBluetoothHandler.write(RoverModeCmd.CAM_RES);
                 mBluetoothHandler.write(_cmd);
 
             }
@@ -383,84 +447,152 @@ public class GuiActivity extends AppCompatActivity {
     //TODO: load bitmap to Picasso for refreshing
     private void printBitmap(final Bitmap bitmap) {
         if (bitmap != null) {
-            Log.e(TAG, "Bitmap:" + bitmap.getWidth() + " - " + bitmap.getHeight() + " - " + bitmap.getByteCount());
-            ThreadHandler.getInstance().doInForground(new Runnable() {
+//            Log.e(TAG, "Bitmap:" + bitmap.getWidth() + " - " + bitmap.getHeight() + " - " + bitmap.getByteCount());
+
+            mChoreographer.postFrameCallback(new Choreographer.FrameCallback() {
                 @Override
-                public void run() {
-//                    Uri file = Ultis.getImageUri(getApplicationContext(), bitmap);
-//                    Picasso picasso = Picasso.with(getApplicationContext());
-//                    picasso.invalidate(file);
-//                    picasso.load(file).into(mImageView);
+                public void doFrame(long l) {
 
                     mImageView.setImageBitmap(bitmap);
                     mImageView.invalidate();
-
                 }
             });
         }
     }
 
-    private class BTListenerTask extends AsyncTask<BluetoothDevice, BluetoothDevice, Boolean> {
+    private class BTListenerTask extends AsyncTask<BluetoothDevice, Bitmap, Boolean> {
 
         BluetoothDevice bluetoothDevice;
+        Bitmap img;
+        int count = 0;
+        long timerStart = SystemClock.elapsedRealtime();
+        double render0delay = 0;
+
+//        final LinkedBlockingQueue<Bitmap> bq = new LinkedBlockingQueue<Bitmap>(Integer.MAX_VALUE);
+
+
+        protected void onProgressUpdate(Bitmap... bitmaps) {
+            super.onProgressUpdate(bitmaps);
+            printBitmap(bitmaps[bitmaps.length - 1]);
+            long startTime = SystemClock.elapsedRealtime();
+            if (bitmaps.length > 0) {
+                try {
+                    TimingLogger timings = new TimingLogger("BTListenerTask", "onProgressUpdate");
+                    renderBitmap(bitmaps[bitmaps.length -1]);
+//                    printBitmap(bitmaps[bitmaps.length - 1]);
+//                    File savedBmp = Ultis.saveBitmap(bitmaps[bitmaps.length - 1]);
+//                    listImg.add(savedBmp.getAbsolutePath());
+                    timings.addSplit("printBitmap");
+                    timings.dumpToLog();
+                } finally {
+//                    bitmaps[bitmaps.length -1].recycle();
+//                    bitmaps[bitmaps.length -1] = null;
+                }
+
+            }
+
+            long endTime = SystemClock.elapsedRealtime();
+            long elapsedMilliSeconds = endTime - startTime;
+            double elapsedSeconds = elapsedMilliSeconds;
+            Log.i("onReceivedData", "finished render a bitmap " + elapsedSeconds + " ms");
+            count += 1;
+            render0delay += elapsedSeconds;
+            if (count == 30) {
+                long timer30 = SystemClock.elapsedRealtime();
+                double timerCount = (timer30 - timerStart);
+
+                Log.i("fps", "actual render: " + count + "/" + timerCount / 1000.0 + " s");
+                Log.i("fps", "without GC pause " + count + "/" + render0delay / 1000.0 + " s");
+                count = 0;
+                render0delay = 0;
+            }
+        }
+
         @Override
         protected Boolean doInBackground(BluetoothDevice... bluetoothDevices) {
-            try {
-                Thread.sleep(500);
-            }catch (Exception e){}
 
-            bluetoothDevice = bluetoothDevices[0];
+            try {
+                mBluetoothHandler = BluetoothHandler.newInstance(new BluetoothListener() {
+
+                    //            TODO: get data callback from Rover Mode
+                    @Override
+                    public void onReceivedData(final byte[] bytes) {
+//                        long startTime = SystemClock.elapsedRealtime();
+                        ArrayList dataPacket = Ultis.getDataPacket(bytes);
+                        String prefix = dataPacket.get(0).toString();
+                        Log.i("onReceivedData",prefix);
+
+                        switch (prefix) {
+                            case Constant.ROVER_IMG:
+                                try {
+                                    img = Ultis.byteArray2Bitmap((byte[]) dataPacket.get(1));
+                                    publishProgress(img);
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+
+                                break;
+                        }
+
+                    }
+
+
+                    @Override
+                    public void onConnected(BluetoothDevice device) {
+                        Toast.makeText(getApplicationContext(), "connected", Toast.LENGTH_LONG).show();
+
+                    }
+
+                    @Override
+                    public void connectionFailed() {
+
+                    }
+
+                    @Override
+                    public void onLostConnection() {
+
+                    }
+
+                    //TODO: get data callback fro Cmd Mode
+                    @Override
+                    public void onGotCallback(String ack) {
+                        Toast.makeText(getApplicationContext(), ack, Toast.LENGTH_LONG).show();
+                        if (ack.equals(CommandList.CURRENT_STAT)) {
+                            mBluetoothHandler.write(CommandList.A_TERMINATE);
+                        }
+                    }
+                }, false);
+                mBluetoothHandler.start();
+                mBluetoothHandler.connect(bluetoothDevices[0]);
+            } catch (Exception e) {
+            }
+//            bluetoothDevice = bluetoothDevices[0];
             return true;
         }
 
         @Override
-        protected void onPostExecute(Boolean success){
-            mBluetoothHandler = BluetoothHandler.newInstance(new BluetoothListener() {
-
-                //            TODO: get data callback from Rover Mode
-                @Override
-                public void onReceivedData(final byte[] bytes) {
-                    ArrayList dataPacket = Ultis.getDataPacket(bytes);
-                    String prefix = Ultis.convertArrayBufferToString((byte[])dataPacket.get(0)) ;
-
-                    switch (prefix){
-                        case Constant.ROVER_IMG:
-                            Bitmap bitmap = (Bitmap) dataPacket.get(2);
-                            printBitmap(bitmap);
-                            break;
-                    }
-                    Log.i("onReceivedData","prefix:" +prefix);
-
-                }
-
-                @Override
-                public void onConnected(BluetoothDevice device) {
-                    Toast.makeText(getApplicationContext(), "connected", Toast.LENGTH_LONG).show();
-
-                }
-
-                @Override
-                public void connectionFailed() {
-
-                }
-
-                @Override
-                public void onLostConnection() {
-
-                }
-
-                //TODO: get data callback fro Cmd Mode
-                @Override
-                public void onGotCallback(String ack) {
-                    Toast.makeText(getApplicationContext(), ack, Toast.LENGTH_LONG).show();
-                    if (ack.equals(CommandList.CURRENT_STAT)) {
-                        mBluetoothHandler.write(CommandList.A_TERMINATE);
-                    }
-                }
-            }, false);
-            mBluetoothHandler.start();
-            mBluetoothHandler.connect(bluetoothDevice);
+        protected void onPostExecute(Boolean success) {
         }
     }
 
+
+    private void renderBitmap(final Bitmap bitmap) {
+
+        if (bitmap == null)
+            return;
+        Canvas canvas = mSurfaceHolder.lockCanvas();
+        try {
+            canvas.drawBitmap(bitmap, 5, 5, new Paint());
+        } finally {
+            mSurfaceView.invalidate();
+            mSurfaceHolder.unlockCanvasAndPost(canvas);
+//            mSurfaceView.postInvalidate();
+
+        }
+
+
+    }
 }
+
+
+
