@@ -4,10 +4,12 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
+import android.graphics.Bitmap;
 import android.util.Log;
 import android.util.TimingLogger;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -15,6 +17,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EmptyStackException;
 import java.util.UUID;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import lkphan.btcontroller.jadecontroller.ultis.Ultis;
 
@@ -51,6 +57,7 @@ public class BluetoothHandler {
     private static final int BIG_BUFF = 1024 * 64;
     byte[] smallByte;
     byte[] bigByte;
+    ArrayList garbage = new ArrayList();
 
 
     public BluetoothHandler(BluetoothListener bluetoothListener, boolean isRoverMode) {
@@ -230,14 +237,12 @@ public class BluetoothHandler {
         public void run() {
             byte[] data;
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            int frCount = 0;
+            BlockingQueue<ArrayList> bq = new LinkedBlockingQueue<ArrayList>();
+            String fileName = "bmp";
             while (mBluetoothSocket.isConnected()) {
                 try {
 
-                    try {
-                        Thread.sleep(500);
-                    } catch (Exception e) {
-
-                    }
                     int available = mInputStream.available();
                     if (available > 0) {
                         data = new byte[available];
@@ -247,17 +252,47 @@ public class BluetoothHandler {
                         if (mIsRoverMode) {
                             if (Ultis.isEOI(byteArrayOutputStream.toByteArray())) {
                                 byte[] streamData = null;
+                                ArrayList imgPacket = null;
+                                ArrayList msg = new ArrayList();
+                                Bitmap bmp = null;
                                 try {
-                                    TimingLogger tm = new TimingLogger("fps","thread data callback");
+                                    TimingLogger tm = new TimingLogger("fps", "thread data callback");
                                     streamData = Ultis.getStandardPacket(byteArrayOutputStream.toByteArray());
                                     tm.addSplit("done get standard data callback");
-                                    mBluetoothListener.onReceivedData(streamData);
-                                    tm.addSplit("done to send data to ui thread");
+
+                                    imgPacket = Ultis.getDataPacket(streamData);
+                                    tm.addSplit("done getDataPacket");
+
+                                    bmp = Ultis.byteArray2Bitmap((byte[]) imgPacket.get(1));
+                                    tm.addSplit("done byteArray2Bitmap");
+
+                                    File savedFile = Ultis.saveBitmap(bmp, fileName + frCount);
+                                    frCount += 1;
+                                    Log.i(TAG, Integer.toString(frCount));
+                                    tm.addSplit("done saveBitmap");
+
+                                    msg.add(imgPacket.get(0));
+                                    msg.add(savedFile.getAbsolutePath());
+                                    garbage.add(savedFile.getAbsolutePath());
+                                    mBluetoothListener.onReceivedData(msg);
+                                    if (frCount == 5)
+                                        frCount = 0;
+//                                    try {
+//                                        bq.put(msg);
+//                                        if (frCount >= 0) {
+//
+//                                        }
+//                                    } catch (Exception e) {
+//                                    }
+                                    tm.addSplit("done to send onReceivedData");
                                     tm.dumpToLog();
 
                                 } finally {
                                     byteArrayOutputStream.reset();
                                     streamData = null;
+//                                    bmp.recycle();
+//                                    msg = null;
+//                                    imgPacket = null;
                                 }
                             }
                         } else {
@@ -359,6 +394,7 @@ public class BluetoothHandler {
         public void cancel() {
             try {
                 mBluetoothServerSocket.close();
+                Ultis.deleteBmp(garbage);
             } catch (IOException e) {
                 e.printStackTrace();
             }

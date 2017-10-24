@@ -164,7 +164,7 @@ public class GuiActivity extends AppCompatActivity {
         cbxGripOp = (CheckBox) findViewById(R.id.cbxGripOp);
         cbxRoverOp = (CheckBox) findViewById(R.id.cbxRoverOp);
         cbxToggleConnect = (CheckBox) findViewById(R.id.cbxToggleConnect);
-//        mImageView = (ImageView) findViewById(R.id.video);
+        mImageView = (ImageView) findViewById(R.id.video);
         mSurfaceView = (SurfaceView) findViewById(R.id.surfaceView);
         mSurfaceHolder = mSurfaceView.getHolder();
         mSurfaceHolder.setFormat(PixelFormat.RGBA_8888);
@@ -358,13 +358,18 @@ public class GuiActivity extends AppCompatActivity {
         }
     }
 
-    private class BTListenerTask extends AsyncTask<BluetoothDevice, Bitmap, Boolean> {
+    private class BTListenerTask extends AsyncTask<BluetoothDevice, String, Boolean> {
         TimingLogger tm = new TimingLogger("fps", "UI thread");
         Bitmap img;
 
-        protected void onProgressUpdate(Bitmap... bitmaps) {
-            super.onProgressUpdate(bitmaps);
-            renderBitmap(bitmaps[0]);
+        protected void onProgressUpdate(String... strings) {
+            super.onProgressUpdate(strings);
+//            renderBitmap(bitmaps[0]);
+//            printBitmap();
+            Bitmap bmp = BitmapFactory.decodeFile(strings[0]);
+            mImageView.setImageBitmap(bmp);
+            mImageView.invalidate();
+
 //            Log.i("renderBitmap", bitmaps[0].toString());
 
 //            tm.addSplit("finished render 1 frame");
@@ -379,18 +384,20 @@ public class GuiActivity extends AppCompatActivity {
 
                     //            TODO: get data callback from Rover Mode
                     @Override
-                    public void onReceivedData(final byte[] bytes) {
+                    public void onReceivedData(final ArrayList data) {
 
-                        ArrayList dataPacket = Ultis.getDataPacket(bytes);
-                        String prefix = dataPacket.get(0).toString();
+//                        ArrayList dataPacket = Ultis.getDataPacket(bytes);
+                        String prefix = data.get(0).toString();
+                        tm.addSplit("done get prefix bmp");
 //                        Log.i("onReceivedData", prefix);
 
                         switch (prefix) {
                             case Constant.ROVER_IMG:
                                 try {
-                                    img = Ultis.byteArray2Bitmap((byte[]) dataPacket.get(1));
-                                    tm.addSplit("done convert to bitmap");
-                                    publishProgress(img);
+//                                    img = Ultis.byteArray2Bitmap((byte[]) dataPacket.get(1));
+                                    String imgPath = data.get(1).toString();
+                                    tm.addSplit("done get file path bmp");
+                                    publishProgress(imgPath);
                                     tm.addSplit("done push to progress");
 //                                    tm.addSplit("updated a bitmap");
                                 } catch (Exception e) {

@@ -332,14 +332,13 @@ public class Ultis {
         return null;
     }
 
-    public static File saveBitmap(Bitmap bmp) {
+    public static File saveBitmap(Bitmap bmp,String filename) {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         try {
-            String filename;
 
-            filename = Long.toString(SystemClock.elapsedRealtime());
+//            filename = Long.toString(SystemClock.elapsedRealtime());
 
-            ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-            bmp.compress(Bitmap.CompressFormat.JPEG, 60, bytes);
+            bmp.compress(Bitmap.CompressFormat.JPEG, 70, bytes);
             File f = new File(Environment.getExternalStorageDirectory()
                     + File.separator + filename + ".jpg");
             f.createNewFile();
@@ -348,9 +347,21 @@ public class Ultis {
             fo.close();
             return f;
         } catch (Exception e) {
+        } finally {
+            bytes.reset();
         }
 
         return null;
+    }
+
+    public static void deleteBmp(ArrayList<String> listImg) {
+        for (String file : listImg) {
+            File fileDeleted = new File(file);
+            try {
+                fileDeleted.getCanonicalFile().delete();
+            } catch (Exception e) {
+            }
+        }
     }
 
     public static String testRenderBmpArray(byte[] bytes) {
@@ -359,7 +370,7 @@ public class Ultis {
 
         ArrayList dataPacket = getDataPacket(bytes);
         Bitmap img = Ultis.byteArray2Bitmap((byte[]) dataPacket.get(1));
-        File savedBmp = Ultis.saveBitmap(img);
+        File savedBmp = Ultis.saveBitmap(img,"test");
 
         return savedBmp.getAbsolutePath();
 

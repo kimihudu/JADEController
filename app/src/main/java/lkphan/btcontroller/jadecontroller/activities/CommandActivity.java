@@ -69,10 +69,9 @@ public class CommandActivity extends AppCompatActivity {
 
             //            TODO: get data callback from Rover Mode
             @Override
-            public void onReceivedData(byte[] bytes) {
+            public void onReceivedData(ArrayList data) {
                 try {
-                    ArrayList dataPacket =  Ultis.getDataPacket(bytes);
-                    dataPacket.get(2);
+
 
                 } catch (Exception e) {
                 }
