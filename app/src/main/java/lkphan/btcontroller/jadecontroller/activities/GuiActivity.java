@@ -124,106 +124,12 @@ public class GuiActivity extends AppCompatActivity {
         //TODO: get btJade
         mBluetoothDevice = getIntent().getExtras().getParcelable("data");
 //        TODO: create BluetoothHandler with selected btJade
+
+
         BTListenerTask btListenerTask = new BTListenerTask();
         btListenerTask.execute(mBluetoothDevice);
-        mImageView.invalidate();
 
-
-
-//        mBluetoothHandler = BluetoothHandler.newInstance(new BluetoothListener() {
-//            String datacb = "";
-//
-//            //            TODO: get data callback from Rover Mode
-//            @Override
-//            public void onReceivedData(final byte[] bytes) {
-//                try {
-//
-//                    ThreadHandler.getInstance().doInForground(new Runnable() {
-//                        @Override
-//                        public void run() {
-//                            ArrayList dataPacket = Ultis.getDataPacket(bytes);
-//
-//                            String strPrefix = Ultis.convertArrayBufferToString((byte[]) dataPacket.get(0));
-//                            if (strPrefix.contains(Constant.STAT_IMG)) {
-//                                final Bitmap bitmap = (Bitmap) dataPacket.get(2);
-//                                printBitmap(bitmap);
-////                        Canvas canvas = mSurfaceHolder.lockCanvas();
-////                        canvas.drawColor(Color.BLACK);
-////                        canvas.drawBitmap(bitmap, 0, 0, new Paint());
-////                        mSurfaceHolder.unlockCanvasAndPost(canvas);
-//
-////                        mCamera.setPreviewCallback(new Camera.PreviewCallback() {
-////                            @Override
-////                            public void onPreviewFrame(byte[] bytes, Camera camera) {
-////                                previewCallBack(bitmap);
-////                            }
-////                        });
-////                        mCamera.startPreview();
-//
-//                            }
-//                        }
-//                    });
-//
-//
-//                } catch (Exception e) {
-//                    Log.wtf("onReceivedData", e.getMessage());
-//                }
-//
-//            }
-//
-//            @Override
-//            public void onConnected(BluetoothDevice device) {
-//                Toast.makeText(getApplicationContext(), "connected", Toast.LENGTH_LONG).show();
-//
-//            }
-//
-//            @Override
-//            public void connectionFailed() {
-//
-//            }
-//
-//            @Override
-//            public void onLostConnection() {
-//
-//            }
-//
-//            //TODO: get data callback fro Cmd Mode
-//            @Override
-//            public void onGotCallback(String ack) {
-//                Toast.makeText(getApplicationContext(), ack, Toast.LENGTH_LONG).show();
-//                if (ack.equals(CommandList.CURRENT_STAT)) {
-//                    mBluetoothHandler.write(CommandList.A_TERMINATE);
-//                }
-//
-//
-////                Log.i("onGotCallback", ack);
-////                if (ack.equals(BluetoothHandler.ACK_INIT)) {
-////                    mInitAck = true;
-////                    mBluetoothHandler.write(cmdByte);
-////                    mBluetoothHandler.write(BluetoothHandler.DATA_END.getBytes());
-////                } else if (ack.equals(BluetoothHandler.ACK_DATA_RECEIVED)) {
-////                    mDataAck = true;
-////                }
-//            }
-//        }, false);
-//        mBluetoothHandler.start();
-//        mBluetoothHandler.connect(mBluetoothDevice);
     }
-
-//    private void setCamera() {
-//        mCamera = Camera.open();
-//        if (mCamera != null) {
-//            mCamera.setDisplayOrientation(90);
-//
-//            Camera.Parameters parameters = mCamera.getParameters();
-////            previewFormat = ImageFormat.NV21;
-//            parameters.setPreviewSize(320, 240);
-////            mSurfaceHolder.setFixedSize(width, height);
-//            parameters.setRotation(90);
-//            mCamera.setParameters(parameters);
-//        }
-//
-//    }
 
     private void addControl() {
 
@@ -248,7 +154,7 @@ public class GuiActivity extends AppCompatActivity {
             public void onClick(View view) {
                 mBluetoothHandler.stop();
                 Intent i = new Intent(getApplicationContext(), TestActivity.class);
-                i.putExtra("listImg",listImg);
+                i.putExtra("listImg", listImg);
                 startActivity(i);
 
             }
@@ -258,7 +164,7 @@ public class GuiActivity extends AppCompatActivity {
         cbxGripOp = (CheckBox) findViewById(R.id.cbxGripOp);
         cbxRoverOp = (CheckBox) findViewById(R.id.cbxRoverOp);
         cbxToggleConnect = (CheckBox) findViewById(R.id.cbxToggleConnect);
-        mImageView = (ImageView) findViewById(R.id.video);
+//        mImageView = (ImageView) findViewById(R.id.video);
         mSurfaceView = (SurfaceView) findViewById(R.id.surfaceView);
         mSurfaceHolder = mSurfaceView.getHolder();
         mSurfaceHolder.setFormat(PixelFormat.RGBA_8888);
@@ -270,7 +176,6 @@ public class GuiActivity extends AppCompatActivity {
 
             @Override
             public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i1, int i2) {
-                Toast.makeText(getApplicationContext(), "surface changeed", Toast.LENGTH_LONG).show();
             }
 
             @Override
@@ -325,7 +230,7 @@ public class GuiActivity extends AppCompatActivity {
         @Override
         public void onClick(View view) {
 
-            Boolean isRoverMde = false;
+            Boolean isRoverMde = true;
 
             String selectedControl = ((CheckBox) view).getText().toString();
             Boolean state = ((CheckBox) view).isChecked();
@@ -383,13 +288,13 @@ public class GuiActivity extends AppCompatActivity {
                     break;
             }
 
-            if (isCamOn && isRoverOn) {
-                isRoverMde = true;
+            if (!(isCamOn && isRoverOn)) {
+                isRoverMde = false;
             }
 
             mBluetoothHandler.write(RoverModeCmd.CAM_RES);
-            mBluetoothHandler.setROVER_MODE(isRoverMde);
             mBluetoothHandler.write(cmd);
+            mBluetoothHandler.setROVER_MODE(isRoverMde);
         }
     };
 
@@ -424,14 +329,13 @@ public class GuiActivity extends AppCompatActivity {
 
                 if (_cmd.equals(ROVER_OFF) || _cmd.equals(RoverModeCmd.A_TERMINATE)) {
                     cbxRoverOp.setChecked(false);
-                    mBluetoothHandler.setROVER_MODE(false);
                 } else if (_cmd.equals(ROVER_ON)) {
                     cbxRoverOp.setChecked(true);
-                    mBluetoothHandler.setROVER_MODE(true);
                 }
 
                 mBluetoothHandler.write(RoverModeCmd.CAM_RES);
                 mBluetoothHandler.write(_cmd);
+                mBluetoothHandler.setROVER_MODE(cbxRoverOp.isChecked());
 
             }
 
@@ -449,63 +353,22 @@ public class GuiActivity extends AppCompatActivity {
         if (bitmap != null) {
 //            Log.e(TAG, "Bitmap:" + bitmap.getWidth() + " - " + bitmap.getHeight() + " - " + bitmap.getByteCount());
 
-            mChoreographer.postFrameCallback(new Choreographer.FrameCallback() {
-                @Override
-                public void doFrame(long l) {
-
-                    mImageView.setImageBitmap(bitmap);
-                    mImageView.invalidate();
-                }
-            });
+            mImageView.setImageBitmap(bitmap);
+            mImageView.invalidate();
         }
     }
 
     private class BTListenerTask extends AsyncTask<BluetoothDevice, Bitmap, Boolean> {
-
-        BluetoothDevice bluetoothDevice;
+        TimingLogger tm = new TimingLogger("fps", "UI thread");
         Bitmap img;
-        int count = 0;
-        long timerStart = SystemClock.elapsedRealtime();
-        double render0delay = 0;
-
-//        final LinkedBlockingQueue<Bitmap> bq = new LinkedBlockingQueue<Bitmap>(Integer.MAX_VALUE);
-
 
         protected void onProgressUpdate(Bitmap... bitmaps) {
             super.onProgressUpdate(bitmaps);
-            printBitmap(bitmaps[bitmaps.length - 1]);
-            long startTime = SystemClock.elapsedRealtime();
-            if (bitmaps.length > 0) {
-                try {
-                    TimingLogger timings = new TimingLogger("BTListenerTask", "onProgressUpdate");
-                    renderBitmap(bitmaps[bitmaps.length -1]);
-//                    printBitmap(bitmaps[bitmaps.length - 1]);
-//                    File savedBmp = Ultis.saveBitmap(bitmaps[bitmaps.length - 1]);
-//                    listImg.add(savedBmp.getAbsolutePath());
-                    timings.addSplit("printBitmap");
-                    timings.dumpToLog();
-                } finally {
-//                    bitmaps[bitmaps.length -1].recycle();
-//                    bitmaps[bitmaps.length -1] = null;
-                }
+            renderBitmap(bitmaps[0]);
+//            Log.i("renderBitmap", bitmaps[0].toString());
 
-            }
-
-            long endTime = SystemClock.elapsedRealtime();
-            long elapsedMilliSeconds = endTime - startTime;
-            double elapsedSeconds = elapsedMilliSeconds;
-            Log.i("onReceivedData", "finished render a bitmap " + elapsedSeconds + " ms");
-            count += 1;
-            render0delay += elapsedSeconds;
-            if (count == 30) {
-                long timer30 = SystemClock.elapsedRealtime();
-                double timerCount = (timer30 - timerStart);
-
-                Log.i("fps", "actual render: " + count + "/" + timerCount / 1000.0 + " s");
-                Log.i("fps", "without GC pause " + count + "/" + render0delay / 1000.0 + " s");
-                count = 0;
-                render0delay = 0;
-            }
+//            tm.addSplit("finished render 1 frame");
+//            tm.dumpToLog();
         }
 
         @Override
@@ -517,25 +380,27 @@ public class GuiActivity extends AppCompatActivity {
                     //            TODO: get data callback from Rover Mode
                     @Override
                     public void onReceivedData(final byte[] bytes) {
-//                        long startTime = SystemClock.elapsedRealtime();
+
                         ArrayList dataPacket = Ultis.getDataPacket(bytes);
                         String prefix = dataPacket.get(0).toString();
-                        Log.i("onReceivedData",prefix);
+//                        Log.i("onReceivedData", prefix);
 
                         switch (prefix) {
                             case Constant.ROVER_IMG:
                                 try {
                                     img = Ultis.byteArray2Bitmap((byte[]) dataPacket.get(1));
+                                    tm.addSplit("done convert to bitmap");
                                     publishProgress(img);
+                                    tm.addSplit("done push to progress");
+//                                    tm.addSplit("updated a bitmap");
                                 } catch (Exception e) {
                                     e.printStackTrace();
                                 }
 
                                 break;
                         }
-
+                        tm.dumpToLog();
                     }
-
 
                     @Override
                     public void onConnected(BluetoothDevice device) {
@@ -584,10 +449,9 @@ public class GuiActivity extends AppCompatActivity {
         try {
             canvas.drawBitmap(bitmap, 5, 5, new Paint());
         } finally {
-            mSurfaceView.invalidate();
             mSurfaceHolder.unlockCanvasAndPost(canvas);
-//            mSurfaceView.postInvalidate();
-
+            mSurfaceView.invalidate();
+            bitmap.recycle();
         }
 
 

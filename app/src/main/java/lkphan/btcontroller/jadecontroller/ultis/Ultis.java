@@ -42,9 +42,11 @@ import java.util.TimerTask;
 import lkphan.btcontroller.jadecontroller.model.*;
 
 
+import static android.R.attr.bitmap;
 import static android.R.attr.data;
 import static android.R.attr.offset;
 import static android.R.id.mask;
+import static android.transition.Fade.IN;
 
 
 /**
@@ -82,7 +84,6 @@ public class Ultis {
         String compare = convertArrayBufferToString(data);
         String _prefix = "";
 
-
         if (data == null || data.length == 0)
             return null;
 
@@ -93,12 +94,10 @@ public class Ultis {
         }
 
         byte[] datapacket = Arrays.copyOfRange(data, 8, data.length);
-        String eoi = byte2Hex(datapacket[datapacket.length - 2]) + " " + byte2Hex(datapacket[datapacket.length - 1]);
-        String soi = byte2Hex(datapacket[0]) + " " + byte2Hex(datapacket[1]) + " " + byte2Hex(datapacket[2]);
 
         dataCB.add(_prefix);
 
-        if (soi.contains(Constant.SOI) && eoi.contains(Constant.EOI)) {
+        if (isValidBitmap(datapacket)) {
             dataCB.add(datapacket);
         } else
             dataCB.add(0);
@@ -289,43 +288,25 @@ public class Ultis {
         return Uri.parse(path);
     }
 
-    public static byte[] copyByteArray(byte[] bytes, int from, int to) {
-        return null;
-
-//
-//
-//        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-//
-//        try {
-//            byteArrayOutputStream.write(bytes);
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-////        byte[] streamData = byteArrayOutputStream.toByteArray();
-//
-//        return Arrays.copyOfRange(byteArrayOutputStream.toByteArray(), from, to);
-
-    }
 
     public static Bitmap byteArray2Bitmap(byte[] bytes) {
 
-        String soi = byte2Hex(bytes[0]) + " " + byte2Hex(bytes[1]) + " " + byte2Hex(bytes[2]);
-        String eoi = byte2Hex(bytes[bytes.length - 2]) + " " + byte2Hex(bytes[bytes.length - 1]);
-
-        if (!((soi.equals(Constant.SOI) && eoi.equals(Constant.EOI))))
-            return null;
-
+//        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        Bitmap bitmap = null;
         BitmapFactory.Options opts = new BitmapFactory.Options();
-        opts.inPreferredConfig = Bitmap.Config.ARGB_8888;
+        opts.inPreferredConfig = Bitmap.Config.RGB_565;
         opts.inMutable = true;
         try {
-            Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, opts);
-            Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, Constant.IMG_WIDTH, Constant.IMG_HEIGHT, false);
-            return scaledBitmap;
+            bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, opts);
+//            bitmap.compress(Bitmap.CompressFormat.JPEG,80,out);
+//            Bitmap decoded = BitmapFactory.decodeStream(new ByteArrayInputStream(out.toByteArray()));
+//            Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, Constant.IMG_WIDTH, Constant.IMG_HEIGHT, false);
+            return bitmap;
         } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+//            out.reset();
         }
-
 
         return null;
     }
@@ -382,6 +363,16 @@ public class Ultis {
 
         return savedBmp.getAbsolutePath();
 
+    }
+
+    public static Boolean isValidBitmap(byte[] bytes) {
+        String eoi = byte2Hex(bytes[bytes.length - 2]) + " " + byte2Hex(bytes[bytes.length - 1]);
+        String soi = byte2Hex(bytes[0]) + " " + byte2Hex(bytes[1]) + " " + byte2Hex(bytes[2]);
+
+        if (!((soi.equals(Constant.SOI) && eoi.equals(Constant.EOI))))
+            return false;
+
+        return true;
     }
 
 }

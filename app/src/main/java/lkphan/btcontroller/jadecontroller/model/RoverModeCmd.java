@@ -36,7 +36,7 @@ public class RoverModeCmd {
     /* Grip cmd */
     public static final String GRIP_SET         = "gripset #\r"; // "gripset + number\r"
     public static final String ELE_SET          = "eleset #\r"; // "eleset + number\r"
-    public static final String CAM_RES          = "camres 2\r"; // "camres + number\r"
+    public static final String CAM_RES          = "camres 1\r"; // "camres + number\r"
 
     /* EXP cmd */
     public static final String EXP1_PWR_ON  = "exp1pwron\r";

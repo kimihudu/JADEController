@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
 import android.util.Log;
+import android.util.TimingLogger;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -242,16 +243,21 @@ public class BluetoothHandler {
                         data = new byte[available];
                         mInputStream.read(data);
                         byteArrayOutputStream.write(data);
-                        if (mIsRoverMode) {
 
+                        if (mIsRoverMode) {
                             if (Ultis.isEOI(byteArrayOutputStream.toByteArray())) {
+                                byte[] streamData = null;
                                 try {
-                                    byte[] streamData = Ultis.getStandardPacket(byteArrayOutputStream.toByteArray());
+                                    TimingLogger tm = new TimingLogger("fps","thread data callback");
+                                    streamData = Ultis.getStandardPacket(byteArrayOutputStream.toByteArray());
+                                    tm.addSplit("done get standard data callback");
                                     mBluetoothListener.onReceivedData(streamData);
-//                                    String savedFile = Ultis.testRenderBmpArray(streamData);
-//                                    Log.i(TAG, "saved img " + savedFile);
+                                    tm.addSplit("done to send data to ui thread");
+                                    tm.dumpToLog();
+
                                 } finally {
                                     byteArrayOutputStream.reset();
+                                    streamData = null;
                                 }
                             }
                         } else {
@@ -281,7 +287,10 @@ public class BluetoothHandler {
 //                    data = null;
                 }
             }
+
+
         }
+
 
         public void write(byte[] cmd) {
             try {
