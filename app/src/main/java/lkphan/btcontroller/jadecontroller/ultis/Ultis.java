@@ -266,10 +266,13 @@ public class Ultis {
 
     //TODO: check EOI
     public static Boolean isEOI(byte[] bytes) {
-//        byte[] eoi = Arrays.copyOfRange(bytes, bytes.length - 2, bytes.length);
-        String eoi = byte2Hex(bytes[bytes.length - 2]) + " " + byte2Hex(bytes[bytes.length - 1]);
-        if (eoi.contains(Constant.EOI))
-            return true;
+
+        if (bytes.length > 2){
+            String eoi = byte2Hex(bytes[bytes.length - 2]) + " " + byte2Hex(bytes[bytes.length - 1]);
+            if (eoi.contains(Constant.EOI))
+                return true;
+        }
+
         return false;
     }
 
@@ -332,7 +335,7 @@ public class Ultis {
         return null;
     }
 
-    public static File saveBitmap(Bitmap bmp,String filename) {
+    public static File saveBitmap(Bitmap bmp, String filename) {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         try {
 
@@ -370,7 +373,7 @@ public class Ultis {
 
         ArrayList dataPacket = getDataPacket(bytes);
         Bitmap img = Ultis.byteArray2Bitmap((byte[]) dataPacket.get(1));
-        File savedBmp = Ultis.saveBitmap(img,"test");
+        File savedBmp = Ultis.saveBitmap(img, "test");
 
         return savedBmp.getAbsolutePath();
 

@@ -1,10 +1,12 @@
 package lkphan.btcontroller.jadecontroller.activities;
 
 import android.bluetooth.BluetoothDevice;
+import android.graphics.Bitmap;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
+import android.view.inputmethod.BaseInputConnection;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;

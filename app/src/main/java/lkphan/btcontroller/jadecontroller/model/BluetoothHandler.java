@@ -5,6 +5,10 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
 import android.graphics.Bitmap;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.util.Log;
 import android.util.TimingLogger;
 
@@ -57,6 +61,8 @@ public class BluetoothHandler {
     private static final int BIG_BUFF = 1024 * 64;
     byte[] smallByte;
     byte[] bigByte;
+    Handler handlerBg;
+    Message msg;
     ArrayList garbage = new ArrayList();
 
 
@@ -162,6 +168,10 @@ public class BluetoothHandler {
         return mState;
     }
 
+    public void setHandlerThread(Handler handler) {
+        this.handlerBg = handler;
+    }
+
     /**
      * This thread is to connect to a device
      */
@@ -255,6 +265,7 @@ public class BluetoothHandler {
                                 ArrayList imgPacket = null;
                                 ArrayList msg = new ArrayList();
                                 Bitmap bmp = null;
+                                String prefix;
                                 try {
                                     TimingLogger tm = new TimingLogger("fps", "thread data callback");
                                     streamData = Ultis.getStandardPacket(byteArrayOutputStream.toByteArray());
@@ -266,25 +277,28 @@ public class BluetoothHandler {
                                     bmp = Ultis.byteArray2Bitmap((byte[]) imgPacket.get(1));
                                     tm.addSplit("done byteArray2Bitmap");
 
-                                    File savedFile = Ultis.saveBitmap(bmp, fileName + frCount);
-                                    frCount += 1;
-                                    Log.i(TAG, Integer.toString(frCount));
-                                    tm.addSplit("done saveBitmap");
+//                                    prefix = (String)imgPacket.get(0);
+//                                    tm.addSplit("done prefix");
+
+//                                    File savedFile = Ultis.saveBitmap(bmp, fileName);
+//                                    frCount += 1;
+//                                    Log.i(TAG, Integer.toString(frCount));
+//                                    tm.addSplit("done saveBitmap");
 
                                     msg.add(imgPacket.get(0));
-                                    msg.add(savedFile.getAbsolutePath());
-                                    garbage.add(savedFile.getAbsolutePath());
+                                    msg.add(bmp);
+
                                     mBluetoothListener.onReceivedData(msg);
-                                    if (frCount == 5)
-                                        frCount = 0;
-//                                    try {
-//                                        bq.put(msg);
-//                                        if (frCount >= 0) {
-//
-//                                        }
-//                                    } catch (Exception e) {
-//                                    }
-                                    tm.addSplit("done to send onReceivedData");
+
+//                            attemtple to use handler msg
+//                                      Message m = Message.obtain(); //get null message
+//                                    Bundle b = new Bundle();
+//                                    b.putParcelableArrayList("dataCallback",msg);
+//                                    m.setData(b);
+//                                    //use the handler to send message
+//                                    handlerBg.sendMessage(m);
+
+                                    tm.addSplit("done to send to UIthread");
                                     tm.dumpToLog();
 
                                 } finally {
@@ -400,5 +414,6 @@ public class BluetoothHandler {
             }
         }
     }
+
 
 }

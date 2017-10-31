@@ -17,11 +17,15 @@ import android.hardware.Camera;
 import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.CountDownTimer;
 import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.os.Parcelable;
 import android.os.SystemClock;
 import android.provider.SyncStateContract;
 import android.support.annotation.MainThread;
+import android.support.annotation.UiThread;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.SharedPreferencesCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -63,6 +67,7 @@ import static android.R.attr.breadCrumbShortTitle;
 import static android.R.attr.cacheColorHint;
 import static android.R.attr.data;
 import static android.R.attr.start;
+import static android.R.attr.y;
 import static android.media.CamcorderProfile.get;
 import static android.support.v7.appcompat.R.id.image;
 
@@ -167,7 +172,7 @@ public class GuiActivity extends AppCompatActivity {
         mImageView = (ImageView) findViewById(R.id.video);
         mSurfaceView = (SurfaceView) findViewById(R.id.surfaceView);
         mSurfaceHolder = mSurfaceView.getHolder();
-        mSurfaceHolder.setFormat(PixelFormat.RGBA_8888);
+        mSurfaceHolder.setFormat(PixelFormat.RGB_565);
         mSurfaceHolder.addCallback(new SurfaceHolder.Callback() {
             @Override
             public void surfaceCreated(SurfaceHolder surfaceHolder) {
@@ -358,22 +363,47 @@ public class GuiActivity extends AppCompatActivity {
         }
     }
 
-    private class BTListenerTask extends AsyncTask<BluetoothDevice, String, Boolean> {
+    private class BTListenerTask extends AsyncTask<BluetoothDevice, Bitmap, Boolean> {
         TimingLogger tm = new TimingLogger("fps", "UI thread");
         Bitmap img;
 
-        protected void onProgressUpdate(String... strings) {
-            super.onProgressUpdate(strings);
+        protected void onProgressUpdate(final Bitmap... bitmaps) {
+            super.onProgressUpdate(bitmaps);
+//            img = (Bitmap) objects[0];
+            mImageView.setImageBitmap(bitmaps[0]);
+            mImageView.invalidate();
+            tm.addSplit("done with main bmp");
+
+            new CountDownTimer(300,100) {
+
+                public void onTick(long millisUntilFinished) {
+//                                            long secondUntilFinished = (long) (millisUntilFinished/1000);
+//                                            long secondsPassed = (EndTime - secondUntilFinished);
+//                                            long minutesPassed = (long) (secondsPassed/60);
+//                                            secondsPassed = secondsPassed%60;
+//                                            // So now at this point your time will be: minutesPassed:secondsPassed
+//                                            mytextView.setText(String.format("%02d", minutesPassed) + ":" + String.format("%02d", secondsPassed));
+//                    Bitmap scaledBitmap = Bitmap.createScaledBitmap(img, Constant.IMG_WIDTH, Constant.IMG_HEIGHT, false);
+//                    mImageView.setImageBitmap(scaledBitmap);
+//                    mImageView.invalidate();
+                }
+
+                public void onFinish() {
+//                    Bitmap scaledBitmap = Bitmap.createScaledBitmap(img, Constant.IMG_WIDTH, Constant.IMG_HEIGHT, false);
+                    mImageView.setImageBitmap(bitmaps[0]);
+                    mImageView.invalidate();
+                    tm.addSplit("done counter and display extra bmp");
+                }
+            }.start();
+
+
+
+
 //            renderBitmap(bitmaps[0]);
 //            printBitmap();
-            Bitmap bmp = BitmapFactory.decodeFile(strings[0]);
-            mImageView.setImageBitmap(bmp);
-            mImageView.invalidate();
 
-//            Log.i("renderBitmap", bitmaps[0].toString());
-
-//            tm.addSplit("finished render 1 frame");
-//            tm.dumpToLog();
+            tm.addSplit("done update UI");
+            tm.dumpToLog();
         }
 
         @Override
@@ -382,30 +412,38 @@ public class GuiActivity extends AppCompatActivity {
             try {
                 mBluetoothHandler = BluetoothHandler.newInstance(new BluetoothListener() {
 
-                    //            TODO: get data callback from Rover Mode
+                    // TODO: get data callback from Rover Mode
                     @Override
                     public void onReceivedData(final ArrayList data) {
-
+//                        movingEffect();
+                        tm.addSplit("before get new datacallback");
 //                        ArrayList dataPacket = Ultis.getDataPacket(bytes);
-                        String prefix = data.get(0).toString();
-                        tm.addSplit("done get prefix bmp");
+//                        String prefix = String.valueOf(data.get(0)) ;
+
+                        img = (Bitmap) data.get(1);
+                        tm.addSplit("done get datacallback from background thread");
+                        publishProgress(img);
+                        tm.addSplit("done push to progress");
 //                        Log.i("onReceivedData", prefix);
 
-                        switch (prefix) {
-                            case Constant.ROVER_IMG:
-                                try {
-//                                    img = Ultis.byteArray2Bitmap((byte[]) dataPacket.get(1));
-                                    String imgPath = data.get(1).toString();
-                                    tm.addSplit("done get file path bmp");
-                                    publishProgress(imgPath);
-                                    tm.addSplit("done push to progress");
-//                                    tm.addSplit("updated a bitmap");
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                }
-
-                                break;
-                        }
+//                        switch (prefix) {
+//                            case Constant.ROVER_IMG:
+//                                try {
+//                                    img = (Bitmap) data.get(1);
+////                                    String imgPath = data.get(1).toString();
+//
+////                                    tm.addSplit("done get file bmp");
+//                                    publishProgress(img);
+////                                    tm.addSplit("done push to progress");
+//
+//
+////                                    tm.addSplit("updated a bitmap");
+//                                } catch (Exception e) {
+//                                    e.printStackTrace();
+//                                }
+//
+//                                break;
+//                        }
                         tm.dumpToLog();
                     }
 
@@ -436,6 +474,26 @@ public class GuiActivity extends AppCompatActivity {
                 }, false);
                 mBluetoothHandler.start();
                 mBluetoothHandler.connect(bluetoothDevices[0]);
+
+//                atemplate to get data come from handler msg
+//                Handler handlerUI = new Handler(Looper.getMainLooper()) {
+//                    @Override
+//                    public void handleMessage(Message msg) {
+//                        if (msg == null)
+//                            return;
+//                        Bundle tmp = msg.getData();
+//                        ArrayList container = (ArrayList) tmp.get("dataCallback");
+//                        img = (Bitmap) container.get(1);
+//                        mImageView.setImageBitmap(img);
+//                        mImageView.invalidate();
+////                        publishProgress(img);
+//                        tm.addSplit("done get msg from handler");
+//                        tm.dumpToLog();
+//
+//                    }
+//                };
+//                mBluetoothHandler.setHandlerThread(handlerUI);
+//                mBluetoothHandler.setHandlerThread(handlerUI);
             } catch (Exception e) {
             }
 //            bluetoothDevice = bluetoothDevices[0];
@@ -460,8 +518,15 @@ public class GuiActivity extends AppCompatActivity {
             mSurfaceView.invalidate();
             bitmap.recycle();
         }
+    }
 
-
+    private void movingEffect() {
+        GuiActivity.this.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mImageView.setImageResource(R.mipmap.blur);
+            }
+        });
     }
 }
 

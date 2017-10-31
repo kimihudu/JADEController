@@ -1,6 +1,7 @@
 package lkphan.btcontroller.jadecontroller.model;
 
 import android.bluetooth.BluetoothDevice;
+import android.graphics.Bitmap;
 
 import java.util.ArrayList;
 
